@@ -7,6 +7,8 @@ import sys
 import subprocess
 import time
 import threading
+import json
+import uuid
 from datetime import datetime
 from queue import Queue
 from flask import Flask, render_template, request, jsonify, Response
@@ -198,6 +200,9 @@ system_state = {
     'started': False,
     'starting': False
 }
+
+investment_db_lock = threading.Lock()
+INVESTMENT_DB_PATH = Path('data') / 'investment_db.json'
 
 
 def _set_system_state(*, started=None, starting=None):
@@ -721,6 +726,90 @@ def index():
     """主页"""
     return render_template('index.html')
 
+@app.route('/investment')
+def investment_dashboard():
+    """投资数据库页面"""
+    return render_template('investment.html')
+
+
+def _default_investment_db():
+    return {
+        'metadata': {
+            'owner': '个人投资账户',
+            'base_currency': 'CNY',
+            'version': 1,
+            'last_updated': datetime.now().isoformat(timespec='seconds')
+        },
+        'entries': [
+            {
+                'id': str(uuid.uuid4()),
+                'asset': '沪深300ETF',
+                'asset_type': 'ETF',
+                'currency': 'CNY',
+                'quantity': 120,
+                'price': 3.85,
+                'trade_date': '2024-09-20',
+                'tags': ['长期', '指数'],
+                'notes': '分批定投'
+            },
+            {
+                'id': str(uuid.uuid4()),
+                'asset': '腾讯控股',
+                'asset_type': 'Stock',
+                'currency': 'HKD',
+                'quantity': 15,
+                'price': 320.0,
+                'trade_date': '2024-10-05',
+                'tags': ['港股', '成长'],
+                'notes': '财报前配置'
+            }
+        ]
+    }
+
+
+def _load_investment_db():
+    if not INVESTMENT_DB_PATH.exists():
+        INVESTMENT_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+        default_db = _default_investment_db()
+        INVESTMENT_DB_PATH.write_text(json.dumps(default_db, ensure_ascii=False, indent=2), encoding='utf-8')
+        return default_db
+    try:
+        with INVESTMENT_DB_PATH.open('r', encoding='utf-8') as file:
+            return json.load(file)
+    except json.JSONDecodeError:
+        default_db = _default_investment_db()
+        INVESTMENT_DB_PATH.write_text(json.dumps(default_db, ensure_ascii=False, indent=2), encoding='utf-8')
+        return default_db
+
+
+def _save_investment_db(data):
+    data['metadata']['last_updated'] = datetime.now().isoformat(timespec='seconds')
+    INVESTMENT_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    INVESTMENT_DB_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8')
+
+
+def _summarize_investments(data):
+    entries = data.get('entries', [])
+    total_cost = 0.0
+    asset_counts = {}
+    asset_types = set()
+    for entry in entries:
+        quantity = float(entry.get('quantity', 0) or 0)
+        price = float(entry.get('price', 0) or 0)
+        total_cost += quantity * price
+        asset = entry.get('asset', '未知')
+        asset_counts[asset] = asset_counts.get(asset, 0) + 1
+        asset_types.add(entry.get('asset_type', 'Unknown'))
+
+    top_assets = sorted(asset_counts.items(), key=lambda item: item[1], reverse=True)[:5]
+
+    return {
+        'total_entries': len(entries),
+        'total_cost': round(total_cost, 2),
+        'asset_types': sorted(asset_types),
+        'top_assets': [{'asset': name, 'count': count} for name, count in top_assets]
+    }
+
 @app.route('/api/status')
 def get_status():
     """获取所有应用状态"""
@@ -935,6 +1024,129 @@ def search():
         'query': query,
         'results': results
     })
+
+
+@app.route('/api/investments', methods=['GET'])
+def get_investments():
+    """获取投资数据库内容"""
+    with investment_db_lock:
+        data = _load_investment_db()
+        summary = _summarize_investments(data)
+    return jsonify({'success': True, 'data': data, 'summary': summary})
+
+
+@app.route('/api/investments/schema', methods=['GET'])
+def get_investment_schema():
+    """提供结构化Schema，便于AI工具接入"""
+    schema = {
+        'description': '个人投资数据库Schema',
+        'version': 1,
+        'fields': [
+            {'key': 'id', 'type': 'string', 'required': True},
+            {'key': 'asset', 'type': 'string', 'required': True},
+            {'key': 'asset_type', 'type': 'string', 'required': True},
+            {'key': 'currency', 'type': 'string', 'required': True},
+            {'key': 'quantity', 'type': 'number', 'required': True},
+            {'key': 'price', 'type': 'number', 'required': True},
+            {'key': 'trade_date', 'type': 'string', 'required': True, 'format': 'YYYY-MM-DD'},
+            {'key': 'tags', 'type': 'array', 'items': 'string', 'required': False},
+            {'key': 'notes', 'type': 'string', 'required': False}
+        ]
+    }
+    return jsonify({'success': True, 'schema': schema})
+
+
+@app.route('/api/investments/entries', methods=['POST'])
+def add_investment_entry():
+    """新增投资记录"""
+    payload = request.get_json(silent=True) or {}
+    required_fields = ['asset', 'asset_type', 'currency', 'quantity', 'price', 'trade_date']
+    missing = [field for field in required_fields if not payload.get(field)]
+    if missing:
+        return jsonify({'success': False, 'message': f'缺少必填字段: {", ".join(missing)}'}), 400
+
+    entry = {
+        'id': str(uuid.uuid4()),
+        'asset': payload['asset'],
+        'asset_type': payload['asset_type'],
+        'currency': payload['currency'],
+        'quantity': float(payload['quantity']),
+        'price': float(payload['price']),
+        'trade_date': payload['trade_date'],
+        'tags': payload.get('tags', []),
+        'notes': payload.get('notes', '')
+    }
+
+    with investment_db_lock:
+        data = _load_investment_db()
+        data.setdefault('entries', []).append(entry)
+        _save_investment_db(data)
+        summary = _summarize_investments(data)
+
+    return jsonify({'success': True, 'entry': entry, 'summary': summary})
+
+
+@app.route('/api/investments/entries/<entry_id>', methods=['PUT'])
+def update_investment_entry(entry_id):
+    """更新投资记录"""
+    payload = request.get_json(silent=True) or {}
+    with investment_db_lock:
+        data = _load_investment_db()
+        entries = data.get('entries', [])
+        entry = next((item for item in entries if item.get('id') == entry_id), None)
+        if not entry:
+            return jsonify({'success': False, 'message': '记录不存在'}), 404
+
+        for key in ['asset', 'asset_type', 'currency', 'quantity', 'price', 'trade_date', 'tags', 'notes']:
+            if key in payload:
+                if key in {'quantity', 'price'}:
+                    entry[key] = float(payload[key])
+                else:
+                    entry[key] = payload[key]
+
+        _save_investment_db(data)
+        summary = _summarize_investments(data)
+
+    return jsonify({'success': True, 'entry': entry, 'summary': summary})
+
+
+@app.route('/api/investments/entries/<entry_id>', methods=['DELETE'])
+def delete_investment_entry(entry_id):
+    """删除投资记录"""
+    with investment_db_lock:
+        data = _load_investment_db()
+        entries = data.get('entries', [])
+        new_entries = [item for item in entries if item.get('id') != entry_id]
+        if len(new_entries) == len(entries):
+            return jsonify({'success': False, 'message': '记录不存在'}), 404
+        data['entries'] = new_entries
+        _save_investment_db(data)
+        summary = _summarize_investments(data)
+    return jsonify({'success': True, 'summary': summary})
+
+
+@app.route('/api/investments/import', methods=['POST'])
+def import_investments():
+    """导入投资JSON数据"""
+    payload = request.get_json(silent=True) or {}
+    incoming = payload.get('data')
+    mode = payload.get('mode', 'merge')
+    if not isinstance(incoming, dict):
+        return jsonify({'success': False, 'message': '导入数据格式错误'}), 400
+
+    with investment_db_lock:
+        if mode == 'replace':
+            data = incoming
+        else:
+            data = _load_investment_db()
+            data.setdefault('entries', [])
+            data['entries'].extend(incoming.get('entries', []))
+            data['metadata'] = {**data.get('metadata', {}), **incoming.get('metadata', {})}
+
+        _save_investment_db(data)
+        summary = _summarize_investments(data)
+
+    return jsonify({'success': True, 'summary': summary, 'data': data})
 
 
 @app.route('/api/config', methods=['GET'])

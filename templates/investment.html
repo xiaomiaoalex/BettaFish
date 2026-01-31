@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>投资个人数据库</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: "Inter", "Helvetica Neue", Arial, sans-serif;
+            background: #f5f7fb;
+            color: #111827;
+        }
+
+        .app-shell {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        header {
+            background: #0f172a;
+            color: #fff;
+            padding: 24px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 6px 20px rgba(15, 23, 42, 0.2);
+        }
+
+        .header-title h1 {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .header-title p {
+            font-size: 13px;
+            color: #cbd5f5;
+            margin-top: 6px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .action-button {
+            border: none;
+            background: #2563eb;
+            color: #fff;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .action-button.secondary {
+            background: #1e293b;
+            border: 1px solid #334155;
+        }
+
+        .action-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        main {
+            flex: 1;
+            padding: 28px 32px 40px;
+            display: grid;
+            gap: 20px;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+        }
+
+        .summary-card {
+            background: #fff;
+            padding: 18px;
+            border-radius: 14px;
+            box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
+        }
+
+        .summary-card h3 {
+            font-size: 14px;
+            color: #64748b;
+            margin-bottom: 10px;
+        }
+
+        .summary-card .value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .summary-card ul {
+            margin-top: 10px;
+            list-style: none;
+            color: #475569;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 2.4fr) minmax(260px, 1fr);
+            gap: 20px;
+        }
+
+        .panel {
+            background: #fff;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .panel-header h2 {
+            font-size: 18px;
+        }
+
+        .filters {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .filters input,
+        .filters select {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            font-size: 13px;
+            background: #f8fafc;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th,
+        td {
+            padding: 12px 10px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+            vertical-align: top;
+        }
+
+        th {
+            font-weight: 600;
+            color: #334155;
+            background: #f8fafc;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 999px;
+            background: #e0f2fe;
+            color: #0369a1;
+            margin-right: 6px;
+            font-size: 12px;
+        }
+
+        .table-actions button {
+            border: none;
+            background: transparent;
+            color: #2563eb;
+            cursor: pointer;
+            font-size: 12px;
+            margin-right: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            color: #64748b;
+            margin-bottom: 6px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            background: #f8fafc;
+            font-size: 13px;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 70px;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .form-actions button {
+            flex: 1;
+            border: none;
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .primary {
+            background: #2563eb;
+            color: #fff;
+        }
+
+        .ghost {
+            background: #e2e8f0;
+            color: #0f172a;
+        }
+
+        .status-banner {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            background: #eff6ff;
+            color: #1d4ed8;
+        }
+
+        .json-panel {
+            background: #0f172a;
+            color: #e2e8f0;
+            font-family: "JetBrains Mono", monospace;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .modal {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(15, 23, 42, 0.4);
+            padding: 20px;
+        }
+
+        .modal.visible {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #fff;
+            padding: 20px;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 420px;
+        }
+
+        @media (max-width: 900px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="app-shell">
+    <header>
+        <div class="header-title">
+            <h1>个人投资数据库</h1>
+            <p>JSON驱动 · 高效增删改查 · API直连AI工具</p>
+        </div>
+        <div class="header-actions">
+            <button class="action-button secondary" id="backButton">返回主平台</button>
+            <button class="action-button" id="exportButton">导出JSON</button>
+        </div>
+    </header>
+
+    <main>
+        <section class="summary-grid" id="summaryGrid">
+            <div class="summary-card">
+                <h3>总投入成本</h3>
+                <div class="value" id="totalCost">-</div>
+                <ul>
+                    <li>本币口径</li>
+                </ul>
+            </div>
+            <div class="summary-card">
+                <h3>记录数量</h3>
+                <div class="value" id="totalEntries">-</div>
+                <ul>
+                    <li>包含所有资产</li>
+                </ul>
+            </div>
+            <div class="summary-card">
+                <h3>资产类型</h3>
+                <div class="value" id="assetTypes">-</div>
+                <ul id="assetTypeList"></ul>
+            </div>
+            <div class="summary-card">
+                <h3>高频资产</h3>
+                <div class="value" id="topAssets">-</div>
+                <ul id="topAssetList"></ul>
+            </div>
+        </section>
+
+        <section class="content-grid">
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>资产明细</h2>
+                    <div class="filters">
+                        <input type="text" id="searchInput" placeholder="搜索资产/标签/备注">
+                        <select id="typeFilter">
+                            <option value="">所有类型</option>
+                            <option value="Stock">Stock</option>
+                            <option value="ETF">ETF</option>
+                            <option value="Fund">Fund</option>
+                            <option value="Crypto">Crypto</option>
+                            <option value="Bond">Bond</option>
+                        </select>
+                        <input type="date" id="dateFilter">
+                    </div>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>日期</th>
+                            <th>资产</th>
+                            <th>类型</th>
+                            <th>数量</th>
+                            <th>价格</th>
+                            <th>成本</th>
+                            <th>标签</th>
+                            <th>备注</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="entryTable"></tbody>
+                </table>
+            </div>
+            <aside class="panel">
+                <div class="panel-header">
+                    <h2>新增记录</h2>
+                </div>
+                <form id="entryForm">
+                    <div class="form-group">
+                        <label>资产名称</label>
+                        <input type="text" name="asset" required>
+                    </div>
+                    <div class="form-group">
+                        <label>资产类型</label>
+                        <select name="asset_type" required>
+                            <option value="Stock">Stock</option>
+                            <option value="ETF">ETF</option>
+                            <option value="Fund">Fund</option>
+                            <option value="Crypto">Crypto</option>
+                            <option value="Bond">Bond</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>币种</label>
+                        <input type="text" name="currency" value="CNY" required>
+                    </div>
+                    <div class="form-group">
+                        <label>数量</label>
+                        <input type="number" name="quantity" step="0.0001" required>
+                    </div>
+                    <div class="form-group">
+                        <label>单价</label>
+                        <input type="number" name="price" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label>交易日期</label>
+                        <input type="date" name="trade_date" required>
+                    </div>
+                    <div class="form-group">
+                        <label>标签 (用逗号分隔)</label>
+                        <input type="text" name="tags">
+                    </div>
+                    <div class="form-group">
+                        <label>备注</label>
+                        <textarea name="notes"></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="primary">新增</button>
+                        <button type="button" class="ghost" id="resetButton">清空</button>
+                    </div>
+                </form>
+                <div class="status-banner" id="statusBanner">等待数据同步...</div>
+                <div class="form-group" style="margin-top: 16px;">
+                    <label>导入JSON（支持合并或覆盖）</label>
+                    <input type="file" id="importFile" accept="application/json">
+                    <select id="importMode" style="margin-top: 8px;">
+                        <option value="merge">合并导入</option>
+                        <option value="replace">覆盖导入</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>API预览</label>
+                    <div class="json-panel" id="apiPreview"></div>
+                </div>
+            </aside>
+        </section>
+    </main>
+</div>
+
+<div class="modal" id="editModal">
+    <div class="modal-content">
+        <div class="panel-header">
+            <h2>编辑记录</h2>
+            <button class="action-button secondary" id="closeEditModal">关闭</button>
+        </div>
+        <form id="editForm">
+            <input type="hidden" name="id">
+            <div class="form-group">
+                <label>资产名称</label>
+                <input type="text" name="asset" required>
+            </div>
+            <div class="form-group">
+                <label>资产类型</label>
+                <input type="text" name="asset_type" required>
+            </div>
+            <div class="form-group">
+                <label>币种</label>
+                <input type="text" name="currency" required>
+            </div>
+            <div class="form-group">
+                <label>数量</label>
+                <input type="number" name="quantity" step="0.0001" required>
+            </div>
+            <div class="form-group">
+                <label>单价</label>
+                <input type="number" name="price" step="0.01" required>
+            </div>
+            <div class="form-group">
+                <label>交易日期</label>
+                <input type="date" name="trade_date" required>
+            </div>
+            <div class="form-group">
+                <label>标签 (用逗号分隔)</label>
+                <input type="text" name="tags">
+            </div>
+            <div class="form-group">
+                <label>备注</label>
+                <textarea name="notes"></textarea>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="primary">保存</button>
+                <button type="button" class="ghost" id="cancelEdit">取消</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    const apiPreview = document.getElementById('apiPreview');
+    const entryTable = document.getElementById('entryTable');
+    const totalCost = document.getElementById('totalCost');
+    const totalEntries = document.getElementById('totalEntries');
+    const assetTypes = document.getElementById('assetTypes');
+    const assetTypeList = document.getElementById('assetTypeList');
+    const topAssets = document.getElementById('topAssets');
+    const topAssetList = document.getElementById('topAssetList');
+    const statusBanner = document.getElementById('statusBanner');
+    const searchInput = document.getElementById('searchInput');
+    const typeFilter = document.getElementById('typeFilter');
+    const dateFilter = document.getElementById('dateFilter');
+    const importFile = document.getElementById('importFile');
+    const importMode = document.getElementById('importMode');
+
+    let entries = [];
+
+    const formatCurrency = (value) => new Intl.NumberFormat('zh-CN', {
+        style: 'currency',
+        currency: 'CNY',
+        minimumFractionDigits: 2
+    }).format(value || 0);
+
+    const updateSummary = (summary) => {
+        totalCost.textContent = formatCurrency(summary.total_cost || 0);
+        totalEntries.textContent = summary.total_entries || 0;
+        assetTypes.textContent = (summary.asset_types || []).length;
+        assetTypeList.innerHTML = (summary.asset_types || []).map(type => `<li>${type}</li>`).join('');
+        topAssets.textContent = (summary.top_assets || []).length;
+        topAssetList.innerHTML = (summary.top_assets || []).map(item => `<li>${item.asset} · ${item.count}笔</li>`).join('');
+    };
+
+    const renderTable = () => {
+        const keyword = searchInput.value.trim().toLowerCase();
+        const typeValue = typeFilter.value;
+        const dateValue = dateFilter.value;
+
+        const filtered = entries.filter(entry => {
+            const matchKeyword = !keyword || [
+                entry.asset,
+                entry.asset_type,
+                entry.currency,
+                (entry.tags || []).join(','),
+                entry.notes
+            ].join(' ').toLowerCase().includes(keyword);
+            const matchType = !typeValue || entry.asset_type === typeValue;
+            const matchDate = !dateValue || entry.trade_date === dateValue;
+            return matchKeyword && matchType && matchDate;
+        });
+
+        entryTable.innerHTML = filtered.map(entry => {
+            const cost = (Number(entry.quantity) || 0) * (Number(entry.price) || 0);
+            const tags = (entry.tags || []).map(tag => `<span class="tag">${tag}</span>`).join('');
+            return `
+                <tr>
+                    <td>${entry.trade_date}</td>
+                    <td>${entry.asset}</td>
+                    <td>${entry.asset_type}</td>
+                    <td>${entry.quantity}</td>
+                    <td>${entry.price}</td>
+                    <td>${cost.toFixed(2)}</td>
+                    <td>${tags || '-'}</td>
+                    <td>${entry.notes || '-'}</td>
+                    <td class="table-actions">
+                        <button data-action="edit" data-id="${entry.id}">编辑</button>
+                        <button data-action="delete" data-id="${entry.id}">删除</button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    };
+
+    const setStatus = (message) => {
+        statusBanner.textContent = message;
+    };
+
+    const loadData = async () => {
+        const response = await fetch('/api/investments');
+        const data = await response.json();
+        if (data.success) {
+            entries = data.data.entries || [];
+            updateSummary(data.summary || {});
+            renderTable();
+            apiPreview.textContent = JSON.stringify({
+                endpoints: {
+                    list: '/api/investments',
+                    schema: '/api/investments/schema',
+                    create: '/api/investments/entries',
+                    update: '/api/investments/entries/{id}',
+                    remove: '/api/investments/entries/{id}',
+                    import: '/api/investments/import'
+                },
+                latest_update: data.data.metadata?.last_updated,
+                sample_entry: entries[0] || {}
+            }, null, 2);
+            setStatus('数据已同步');
+        } else {
+            setStatus(`数据加载失败: ${data.message || '未知错误'}`);
+        }
+    };
+
+    const submitEntry = async (payload) => {
+        const response = await fetch('/api/investments/entries', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+        if (data.success) {
+            await loadData();
+            setStatus('新增成功');
+        } else {
+            setStatus(`新增失败: ${data.message}`);
+        }
+    };
+
+    const updateEntry = async (entryId, payload) => {
+        const response = await fetch(`/api/investments/entries/${entryId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+        if (data.success) {
+            await loadData();
+            setStatus('更新成功');
+        } else {
+            setStatus(`更新失败: ${data.message}`);
+        }
+    };
+
+    const deleteEntry = async (entryId) => {
+        const response = await fetch(`/api/investments/entries/${entryId}`, { method: 'DELETE' });
+        const data = await response.json();
+        if (data.success) {
+            await loadData();
+            setStatus('删除成功');
+        } else {
+            setStatus(`删除失败: ${data.message}`);
+        }
+    };
+
+    document.getElementById('entryForm').addEventListener('submit', (event) => {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        submitEntry({
+            asset: formData.get('asset'),
+            asset_type: formData.get('asset_type'),
+            currency: formData.get('currency'),
+            quantity: formData.get('quantity'),
+            price: formData.get('price'),
+            trade_date: formData.get('trade_date'),
+            tags: (formData.get('tags') || '').split(',').map(tag => tag.trim()).filter(Boolean),
+            notes: formData.get('notes')
+        });
+        event.target.reset();
+    });
+
+    document.getElementById('resetButton').addEventListener('click', () => {
+        document.getElementById('entryForm').reset();
+    });
+
+    entryTable.addEventListener('click', (event) => {
+        const button = event.target.closest('button');
+        if (!button) return;
+        const action = button.dataset.action;
+        const entryId = button.dataset.id;
+        const entry = entries.find(item => item.id === entryId);
+        if (!entry) return;
+        if (action === 'edit') {
+            openEditModal(entry);
+        }
+        if (action === 'delete') {
+            deleteEntry(entryId);
+        }
+    });
+
+    const editModal = document.getElementById('editModal');
+    const openEditModal = (entry) => {
+        editModal.classList.add('visible');
+        const form = document.getElementById('editForm');
+        form.elements.id.value = entry.id;
+        form.elements.asset.value = entry.asset;
+        form.elements.asset_type.value = entry.asset_type;
+        form.elements.currency.value = entry.currency;
+        form.elements.quantity.value = entry.quantity;
+        form.elements.price.value = entry.price;
+        form.elements.trade_date.value = entry.trade_date;
+        form.elements.tags.value = (entry.tags || []).join(',');
+        form.elements.notes.value = entry.notes || '';
+    };
+
+    const closeEditModal = () => {
+        editModal.classList.remove('visible');
+    };
+
+    document.getElementById('closeEditModal').addEventListener('click', closeEditModal);
+    document.getElementById('cancelEdit').addEventListener('click', closeEditModal);
+
+    document.getElementById('editForm').addEventListener('submit', (event) => {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        updateEntry(formData.get('id'), {
+            asset: formData.get('asset'),
+            asset_type: formData.get('asset_type'),
+            currency: formData.get('currency'),
+            quantity: formData.get('quantity'),
+            price: formData.get('price'),
+            trade_date: formData.get('trade_date'),
+            tags: (formData.get('tags') || '').split(',').map(tag => tag.trim()).filter(Boolean),
+            notes: formData.get('notes')
+        });
+        closeEditModal();
+    });
+
+    document.getElementById('exportButton').addEventListener('click', async () => {
+        const response = await fetch('/api/investments');
+        const data = await response.json();
+        const blob = new Blob([JSON.stringify(data.data || {}, null, 2)], { type: 'application/json' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'investment_db.json';
+        link.click();
+        URL.revokeObjectURL(link.href);
+    });
+
+    document.getElementById('backButton').addEventListener('click', () => {
+        window.location.href = '/';
+    });
+
+    [searchInput, typeFilter, dateFilter].forEach(control => {
+        control.addEventListener('input', renderTable);
+    });
+
+    importFile.addEventListener('change', async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+        const text = await file.text();
+        try {
+            const json = JSON.parse(text);
+            const response = await fetch('/api/investments/import', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ data: json, mode: importMode.value })
+            });
+            const data = await response.json();
+            if (data.success) {
+                await loadData();
+                setStatus('导入成功');
+            } else {
+                setStatus(`导入失败: ${data.message}`);
+            }
+        } catch (error) {
+            setStatus(`导入失败: ${error.message}`);
+        }
+        event.target.value = '';
+    });
+
+    loadData();
+</script>
+</body>
+</html>
