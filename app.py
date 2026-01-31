@@ -203,6 +203,7 @@ system_state = {
 
 investment_db_lock = threading.Lock()
 INVESTMENT_DB_PATH = Path('data') / 'investment_db.json'
+INVESTMENT_MACRO_PATH = Path('data') / 'investment_macro.json'
 
 
 def _set_system_state(*, started=None, starting=None):
@@ -732,6 +733,12 @@ def investment_dashboard():
     return render_template('investment.html')
 
 
+@app.route('/investment-macro')
+def investment_macro_dashboard():
+    """投资相关宏观数据页面"""
+    return render_template('investment_macro.html')
+
+
 def _default_investment_db():
     return {
         'metadata': {
@@ -786,6 +793,25 @@ def _save_investment_db(data):
     data['metadata']['last_updated'] = datetime.now().isoformat(timespec='seconds')
     INVESTMENT_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     INVESTMENT_DB_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8')
+
+
+def _load_investment_macro():
+    if not INVESTMENT_MACRO_PATH.exists():
+        INVESTMENT_MACRO_PATH.parent.mkdir(parents=True, exist_ok=True)
+        default_data = {
+            'metadata': {
+                'series': '新增人民币贷款：居民户：累计值',
+                'unit': '亿元',
+                'source': '中国人民银行',
+                'start_year': 2005,
+                'end_year': 2025
+            },
+            'data': []
+        }
+        INVESTMENT_MACRO_PATH.write_text(json.dumps(default_data, ensure_ascii=False, indent=2), encoding='utf-8')
+        return default_data
+    with INVESTMENT_MACRO_PATH.open('r', encoding='utf-8') as file:
+        return json.load(file)
 
 
 def _summarize_investments(data):
@@ -1147,6 +1173,13 @@ def import_investments():
         summary = _summarize_investments(data)
 
     return jsonify({'success': True, 'summary': summary, 'data': data})
+
+
+@app.route('/api/investments/macro', methods=['GET'])
+def get_investment_macro():
+    """获取投资相关宏观数据"""
+    data = _load_investment_macro()
+    return jsonify({'success': True, 'data': data})
 
 
 @app.route('/api/config', methods=['GET'])

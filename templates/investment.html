@@ -304,6 +304,7 @@
         </div>
         <div class="header-actions">
             <button class="action-button secondary" id="backButton">返回主平台</button>
+            <button class="action-button secondary" id="macroButton">宏观数据</button>
             <button class="action-button" id="exportButton">导出JSON</button>
         </div>
     </header>
@@ -499,6 +500,7 @@
     const dateFilter = document.getElementById('dateFilter');
     const importFile = document.getElementById('importFile');
     const importMode = document.getElementById('importMode');
+    const macroButton = document.getElementById('macroButton');
 
     let entries = [];
 
@@ -713,6 +715,10 @@
 
     document.getElementById('backButton').addEventListener('click', () => {
         window.location.href = '/';
+    });
+
+    macroButton.addEventListener('click', () => {
+        window.location.href = '/investment-macro';
     });
 
     [searchInput, typeFilter, dateFilter].forEach(control => {

@@ -1019,6 +1019,7 @@
             <div class="search-row">
                 <button class="config-button" id="openConfigButton">LLM 配置</button>
                 <button class="config-button" id="openInvestmentButton">投资数据库</button>
+                <button class="config-button" id="openMacroButton">投资宏观数据</button>
                 <div class="search-box">
                     <input type="text" class="search-input" id="searchInput" placeholder="请输入要分析的内容...">
                     <button class="search-button" id="searchButton">开始</button>
@@ -1146,6 +1147,7 @@
         const SYSTEM_START_ENDPOINT = '/api/system/start';
         const START_BUTTON_DEFAULT_TEXT = '保存并启动系统';
         const INVESTMENT_DASHBOARD_URL = '/investment';
+        const INVESTMENT_MACRO_URL = '/investment-macro';
 
         const configFieldGroups = [
             {
@@ -1373,6 +1375,13 @@
             if (investmentButton) {
                 investmentButton.addEventListener('click', () => {
                     window.location.href = INVESTMENT_DASHBOARD_URL;
+                });
+            }
+
+            const macroButton = document.getElementById('openMacroButton');
+            if (macroButton) {
+                macroButton.addEventListener('click', () => {
+                    window.location.href = INVESTMENT_MACRO_URL;
                 });
             }
 

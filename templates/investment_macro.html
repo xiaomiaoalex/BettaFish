@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>投资宏观数据看板</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: "Inter", "Helvetica Neue", Arial, sans-serif;
+            background: #f5f7fb;
+            color: #0f172a;
+        }
+
+        header {
+            background: #0f172a;
+            color: #fff;
+            padding: 24px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.2);
+        }
+
+        header h1 {
+            font-size: 22px;
+        }
+
+        header p {
+            font-size: 13px;
+            color: #cbd5f5;
+            margin-top: 6px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .action-button {
+            border: none;
+            background: #2563eb;
+            color: #fff;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .action-button.secondary {
+            background: #1e293b;
+            border: 1px solid #334155;
+        }
+
+        main {
+            padding: 28px 32px;
+            display: grid;
+            gap: 20px;
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+        }
+
+        .card {
+            background: #fff;
+            padding: 18px;
+            border-radius: 14px;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+        }
+
+        .card h3 {
+            font-size: 14px;
+            color: #64748b;
+            margin-bottom: 8px;
+        }
+
+        .card .value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .panel {
+            background: #fff;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .panel-header h2 {
+            font-size: 18px;
+        }
+
+        .meta {
+            font-size: 12px;
+            color: #64748b;
+        }
+
+        .chart-wrapper {
+            height: 420px;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 10px;
+            border-bottom: 1px solid #e2e8f0;
+            text-align: left;
+        }
+
+        .data-table th {
+            background: #f8fafc;
+            color: #334155;
+        }
+
+        @media (max-width: 900px) {
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+<header>
+    <div>
+        <h1>投资宏观数据看板</h1>
+        <p>中国人民银行 · 新增人民币贷款：居民户（累计值）</p>
+    </div>
+    <div class="header-actions">
+        <button class="action-button secondary" id="backButton">返回投资数据库</button>
+        <button class="action-button" id="refreshButton">刷新数据</button>
+    </div>
+</header>
+
+<main>
+    <section class="card-grid">
+        <div class="card">
+            <h3>最新累计值</h3>
+            <div class="value" id="latestValue">-</div>
+        </div>
+        <div class="card">
+            <h3>覆盖年份</h3>
+            <div class="value" id="yearRange">-</div>
+        </div>
+        <div class="card">
+            <h3>数据来源</h3>
+            <div class="value" id="dataSource">-</div>
+        </div>
+        <div class="card">
+            <h3>单位</h3>
+            <div class="value" id="unit">-</div>
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="panel-header">
+            <h2>累计值趋势</h2>
+            <span class="meta" id="metaInfo">-</span>
+        </div>
+        <div class="chart-wrapper">
+            <canvas id="macroChart"></canvas>
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="panel-header">
+            <h2>数据明细</h2>
+        </div>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>年份</th>
+                    <th>累计值</th>
+                </tr>
+            </thead>
+            <tbody id="dataTableBody"></tbody>
+        </table>
+    </section>
+</main>
+
+<script>
+    const latestValue = document.getElementById('latestValue');
+    const yearRange = document.getElementById('yearRange');
+    const dataSource = document.getElementById('dataSource');
+    const unit = document.getElementById('unit');
+    const metaInfo = document.getElementById('metaInfo');
+    const dataTableBody = document.getElementById('dataTableBody');
+    const backButton = document.getElementById('backButton');
+    const refreshButton = document.getElementById('refreshButton');
+
+    let chartInstance = null;
+
+    const renderChart = (labels, values) => {
+        const ctx = document.getElementById('macroChart');
+        if (chartInstance) {
+            chartInstance.destroy();
+        }
+        chartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: '新增人民币贷款：居民户（累计值）',
+                        data: values,
+                        borderColor: '#2563eb',
+                        backgroundColor: 'rgba(37, 99, 235, 0.15)',
+                        tension: 0.3,
+                        fill: true,
+                        pointRadius: 3,
+                        pointBackgroundColor: '#1d4ed8'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        title: {
+                            display: true,
+                            text: '累计值 (亿元)'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    }
+                }
+            }
+        });
+    };
+
+    const renderTable = (series) => {
+        dataTableBody.innerHTML = series.map(item => `
+            <tr>
+                <td>${item.year}</td>
+                <td>${item.value.toLocaleString('zh-CN')}</td>
+            </tr>
+        `).join('');
+    };
+
+    const loadMacroData = async () => {
+        const response = await fetch('/api/investments/macro');
+        const payload = await response.json();
+        if (!payload.success) {
+            metaInfo.textContent = payload.message || '数据加载失败';
+            return;
+        }
+        const data = payload.data;
+        const series = data.data || [];
+        if (series.length === 0) {
+            metaInfo.textContent = '暂无数据';
+            return;
+        }
+
+        const labels = series.map(item => item.year);
+        const values = series.map(item => item.value);
+        const latest = series[series.length - 1];
+
+        latestValue.textContent = latest.value.toLocaleString('zh-CN');
+        yearRange.textContent = `${data.metadata.start_year} - ${data.metadata.end_year}`;
+        dataSource.textContent = data.metadata.source;
+        unit.textContent = data.metadata.unit;
+        metaInfo.textContent = `更新范围：${data.metadata.start_year} 至 ${data.metadata.end_year}`;
+
+        renderChart(labels, values);
+        renderTable(series);
+    };
+
+    backButton.addEventListener('click', () => {
+        window.location.href = '/investment';
+    });
+
+    refreshButton.addEventListener('click', loadMacroData);
+
+    loadMacroData();
+</script>
+</body>
+</html>

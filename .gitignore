@@ -238,6 +238,7 @@ browser_data/
 /data/
 !data/
 !data/investment_db.json
+!data/investment_macro.json
 crawled_data/
 output/
 
