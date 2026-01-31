@@ -1,0 +1,38 @@
+{
+  "metadata": {
+    "owner": "个人投资账户",
+    "base_currency": "CNY",
+    "version": 1,
+    "last_updated": "2024-10-15T09:00:00"
+  },
+  "entries": [
+    {
+      "id": "sample-1",
+      "asset": "沪深300ETF",
+      "asset_type": "ETF",
+      "currency": "CNY",
+      "quantity": 120,
+      "price": 3.85,
+      "trade_date": "2024-09-20",
+      "tags": [
+        "长期",
+        "指数"
+      ],
+      "notes": "分批定投"
+    },
+    {
+      "id": "sample-2",
+      "asset": "腾讯控股",
+      "asset_type": "Stock",
+      "currency": "HKD",
+      "quantity": 15,
+      "price": 320.0,
+      "trade_date": "2024-10-05",
+      "tags": [
+        "港股",
+        "成长"
+      ],
+      "notes": "财报前配置"
+    }
+  ]
+}

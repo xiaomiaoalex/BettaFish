@@ -236,6 +236,9 @@ browser_data/
 
 # 爬虫数据输出
 /data/
+!data/
+!data/investment_db.json
+!data/investment_macro.json
 crawled_data/
 output/
 
